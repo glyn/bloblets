@@ -21,9 +21,10 @@ func ResMatchRequest(ifs []IntegrityFields) *http.Request {
 	return request
 }
 
-func ProcessResponse(response []byte) {
+func ProcessResponse(response []byte) []IntegrityFields {
 	responseFieldsColl := []IntegrityFields{}
 	err := json.Unmarshal(response, &responseFieldsColl)
 	cliutil.Check(err)
 	fmt.Printf("Returned SHA1s/Sizes: %#v\n", responseFieldsColl)
+	return responseFieldsColl
 }

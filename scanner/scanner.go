@@ -7,7 +7,7 @@ import (
 	"github.com/glyn/bloblets/cliutil"
 )
 
-func Scan(path string, processAppFiles func(affs []models.AppFileFields)) {
+func Scan(path string, processAppFiles func(appDir string, affs []models.AppFileFields)) {
 	zipper := app_files.ApplicationZipper{}
 
 	if zipper.IsZipFile(path) {
@@ -23,9 +23,9 @@ func Scan(path string, processAppFiles func(affs []models.AppFileFields)) {
 	}
 }
 
-func doScan(dirPath string, processAppFiles func(affs []models.AppFileFields)) {
+func doScan(appDir string, processAppFiles func(appDir string, affs []models.AppFileFields)) {
 	af := app_files.ApplicationFiles{}
-	affs, err := af.AppFilesInDir(dirPath)
+	affs, err := af.AppFilesInDir(appDir)
 	cliutil.Check(err)
-	processAppFiles(affs)
+	processAppFiles(appDir, affs)
 }
