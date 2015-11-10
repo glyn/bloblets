@@ -4,10 +4,12 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"runtime/debug"
 )
 
 func Check(err error) {
 	if err != nil {
+		debug.PrintStack()
 		log.Fatalf("Error: %s", err)
 	}
 }
