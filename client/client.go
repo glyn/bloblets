@@ -2,15 +2,19 @@ package main
 
 import (
 	"net/http"
+	"os"
 
 	"github.com/glyn/bloblets/cliutil"
 	"github.com/glyn/bloblets/resmatch"
+	"github.com/glyn/bloblets/scanner"
 )
 
 func main() {
 	client := &http.Client{}
 
-	request := resmatch.ResMatchRequest()
+	ifs := scanner.Scan(os.Args[1])
+
+	request := resmatch.ResMatchRequest(ifs)
 
 	response := cliutil.Converse(client, request)
 

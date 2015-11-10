@@ -2,15 +2,16 @@ package resmatch
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"runtime"
 
 	"github.com/glyn/bloblets/cliutil"
 )
 
-func ResMatchRequest() *http.Request {
+func ResMatchRequest(ifs []IntegrityFields) *http.Request {
 	url := "http://localhost:8080/v2/resource_match"
-	body := integrityFieldsJSONReader()
+	body := integrityFieldsJSONReader(ifs)
 	request, err := http.NewRequest("PUT", url, body)
 	cliutil.Check(err)
 
@@ -24,4 +25,5 @@ func ProcessResponse(response []byte) {
 	responseFieldsColl := []IntegrityFields{}
 	err := json.Unmarshal(response, &responseFieldsColl)
 	cliutil.Check(err)
+	fmt.Printf("Returned SHA1s/Sizes: %#v\n", responseFieldsColl)
 }

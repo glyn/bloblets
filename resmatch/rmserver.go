@@ -8,7 +8,7 @@ import (
 	"github.com/glyn/bloblets/servutil"
 )
 
-func ResourceMatchHandler(w http.ResponseWriter, r *http.Request) {
+func (m matcher) ResourceMatchHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "PUT" {
 		servutil.Fail(w, "invalid method: %s", r.Method)
 		return
@@ -16,26 +16,32 @@ func ResourceMatchHandler(w http.ResponseWriter, r *http.Request) {
 
 	requestBytes, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		servutil.Fail(w, "read body failed: %s", err)
+		servutil.Fail(w, "reading body failed: %s", err)
 		return
 	}
 
-	requestFieldsColl := []IntegrityFields{}
-	err = json.Unmarshal(requestBytes, &requestFieldsColl)
+	requestFields := []IntegrityFields{}
+	err = json.Unmarshal(requestBytes, &requestFields)
 	if err != nil {
-		servutil.Fail(w, "unmarshal body failed: %s", err)
+		servutil.Fail(w, "unmarshalling body failed: %s", err)
 		return
 	}
 
-	responseFields, err := integrityFieldsJSON()
+	responseFields, err := m.matchResources(requestFields)
 	if err != nil {
-		servutil.Fail(w, "cannot compute response: %s", err)
+		servutil.Fail(w, "computing response failed: %s", err)
 		return
 	}
 
-	_, err = w.Write(responseFields)
+	responseFieldsBytes, err := json.Marshal(responseFields)
 	if err != nil {
-		servutil.Fail(w, "cannot write response: %s", err)
+		servutil.Fail(w, "marshalling response failed: %s", err)
+		return
+	}
+
+	_, err = w.Write(responseFieldsBytes)
+	if err != nil {
+		servutil.Fail(w, "writing response failed: %s", err)
 		return
 	}
 }

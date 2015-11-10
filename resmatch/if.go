@@ -8,8 +8,8 @@ import (
 	"github.com/glyn/bloblets/cliutil"
 )
 
-func integrityFieldsJSONReader() io.Reader {
-	integrityFieldsJson, err := json.Marshal(integrityFields())
+func integrityFieldsJSONReader(ifs []IntegrityFields) io.Reader {
+	integrityFieldsJson, err := json.Marshal(ifs)
 	cliutil.Check(err)
 	return bytes.NewReader(integrityFieldsJson)
 }
