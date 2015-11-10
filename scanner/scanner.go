@@ -2,12 +2,12 @@ package scanner
 
 import (
 	"github.com/cloudfoundry/cli/cf/app_files"
+	"github.com/cloudfoundry/cli/cf/models"
 	"github.com/cloudfoundry/cli/fileutils"
 	"github.com/glyn/bloblets/cliutil"
-	"github.com/glyn/bloblets/resmatch"
 )
 
-func Scan(path string) (ifs []resmatch.IntegrityFields) {
+func Scan(path string, processAppFiles func(affs []models.AppFileFields)) {
 	zipper := app_files.ApplicationZipper{}
 
 	if zipper.IsZipFile(path) {
@@ -16,26 +16,16 @@ func Scan(path string) (ifs []resmatch.IntegrityFields) {
 
 			cliutil.Check(zipper.Unzip(path, tmpDir))
 
-			ifs = doScan(tmpDir)
+			doScan(tmpDir, processAppFiles)
 		})
 	} else {
-		ifs = doScan(path)
+		doScan(path, processAppFiles)
 	}
-	return
 }
 
-func doScan(dirPath string) []resmatch.IntegrityFields {
+func doScan(dirPath string, processAppFiles func(affs []models.AppFileFields)) {
 	af := app_files.ApplicationFiles{}
 	affs, err := af.AppFilesInDir(dirPath)
 	cliutil.Check(err)
-	ifs := make([]resmatch.IntegrityFields, 0, len(affs))
-
-	for _, aff := range affs {
-		ifs = append(ifs, resmatch.IntegrityFields{
-			Sha1: aff.Sha1,
-			Size: aff.Size,
-		})
-	}
-
-	return ifs
+	processAppFiles(affs)
 }
