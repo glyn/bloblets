@@ -19,12 +19,18 @@ import (
 )
 
 func main() {
+	if len(os.Args) != 3 || len(os.Args) > 1 && os.Args[1] == "help" {
+		fmt.Println("Usage: client host:port application-path")
+		os.Exit(1)
+	}
+
 	log.Println("Push started")
 	client := &http.Client{}
+	server := os.Args[1]
 
-	scanner.Scan(os.Args[1], func(appDir string, appFiles []models.AppFileFields) {
+	scanner.Scan(os.Args[2], func(appDir string, appFiles []models.AppFileFields) {
 		log.Println("Resource matching started")
-		request := resmatch.ResMatchRequest(integrityFields(appFiles))
+		request := resmatch.ResMatchRequest(server, integrityFields(appFiles))
 
 		log.Println("Resource matching sending request")
 		response := cliutil.Converse(client, request)
@@ -62,7 +68,7 @@ func main() {
 				}
 
 				log.Println("Uploading application")
-				appbits.UploadApp("test-guid", zipFile, presentFiles)
+				appbits.UploadApp(server, "test-guid", zipFile, presentFiles)
 				log.Println("Uploaded application")
 				log.Println("Deleting uploads file")
 			})

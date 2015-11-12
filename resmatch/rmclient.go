@@ -2,14 +2,15 @@ package resmatch
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"runtime"
 
 	"github.com/glyn/bloblets/cliutil"
 )
 
-func ResMatchRequest(ifs []IntegrityFields) *http.Request {
-	url := "http://localhost:8080/v2/resource_match"
+func ResMatchRequest(server string, ifs []IntegrityFields) *http.Request {
+	url := fmt.Sprintf("http://%s/v2/resource_match", server)
 	body := integrityFieldsJSONReader(ifs)
 	request, err := http.NewRequest("PUT", url, body)
 	cliutil.Check(err)

@@ -30,7 +30,7 @@ const (
 	DefaultAppUploadBitsTimeout = 15 * time.Minute
 )
 
-func UploadApp(appGuid string, zipFile *os.File, presentFiles []models.AppFileFields) {
+func UploadApp(server, appGuid string, zipFile *os.File, presentFiles []models.AppFileFields) {
 	afrs := make([]resources.AppFileResource, 0, len(presentFiles))
 	for _, pf := range presentFiles {
 		afrs = append(afrs, resources.AppFileResource{
@@ -40,11 +40,11 @@ func UploadApp(appGuid string, zipFile *os.File, presentFiles []models.AppFileFi
 			Mode: pf.Mode,
 		})
 	}
-	uploadBits(appGuid, zipFile, afrs)
+	uploadBits(server, appGuid, zipFile, afrs)
 }
 
-func uploadBits(appGuid string, zipFile *os.File, presentFiles []resources.AppFileResource) {
-	apiUrl := fmt.Sprintf("http://localhost:8080/v2/apps/%s/bits", appGuid)
+func uploadBits(server, appGuid string, zipFile *os.File, presentFiles []resources.AppFileResource) {
+	apiUrl := fmt.Sprintf("http://%s/v2/apps/%s/bits", server, appGuid)
 	fileutils.TempFile("requests", func(requestFile *os.File, err error) {
 		cliutil.Check(err)
 
@@ -67,7 +67,7 @@ func uploadBits(appGuid string, zipFile *os.File, presentFiles []resources.AppFi
 		request.HttpReq.Header.Set("Content-Type", contentType)
 
 		response := &resources.Resource{}
-		_, err = performPollingRequestForJSONResponse("localhost:8080", request, response, DefaultAppUploadBitsTimeout)
+		_, err = performPollingRequestForJSONResponse(server, request, response, DefaultAppUploadBitsTimeout)
 		cliutil.Check(err)
 	})
 }
