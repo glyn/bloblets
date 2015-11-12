@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"mime/multipart"
 	"net/http"
 	"net/textproto"
@@ -126,10 +127,7 @@ type Request struct {
 }
 
 func newRequestForFile(method, fullUrl string, body *os.File) (req *Request, apiErr error) {
-
-	teePrinter := &cliutil.LoggingTeePrinter{}
-	ui := terminal.NewUI(os.Stdin, teePrinter)
-
+	ui := terminal.NewUI(os.Stdin, &cliutil.NonPrinter{})
 	progressReader := net.NewProgressReader(body, ui, 5*time.Second)
 	progressReader.Seek(0, 0)
 	fileStats, err := body.Stat()
@@ -171,6 +169,8 @@ type AsyncResource struct {
 }
 
 func performPollingRequestForJSONResponse(endpoint string, request *Request, response interface{}, timeout time.Duration) (headers http.Header, apiErr error) {
+	log.Println("Polling entered")
+	defer log.Println("Polling exiting")
 	query := request.HttpReq.URL.Query()
 	query.Add("async", "true")
 	request.HttpReq.URL.RawQuery = query.Encode()
@@ -203,12 +203,13 @@ func performPollingRequestForJSONResponse(endpoint string, request *Request, res
 		return
 	}
 
+	log.Printf("Polling waiting for job %s\n", jobUrl)
+
 	if !strings.Contains(jobUrl, "/jobs/") {
 		return
 	}
 
 	apiErr = waitForJob(endpoint+jobUrl, request.HttpReq.Header.Get("Authorization"), timeout)
-
 	return
 }
 
@@ -244,7 +245,6 @@ func doRequestHandlingAuth(request *Request) (rawResponse *http.Response, err er
 func gwDoRequestAndHandlerError(request *Request) (rawResponse *http.Response, err error) {
 	rawResponse, err = gwDoRequest(request.HttpReq)
 	cliutil.Check(err)
-
 	if rawResponse.StatusCode > 299 {
 		jsonBytes, _ := ioutil.ReadAll(rawResponse.Body)
 		rawResponse.Body.Close()
@@ -261,7 +261,8 @@ func gwDoRequest(request *http.Request) (response *http.Response, err error) {
 	httpClient := net.NewHttpClient(transport)
 
 	for i := 0; i < 3; i++ {
-		response, err = httpClient.Do(request)
+		response, err = httpClient.Do(request) // prints some spaces
+		fmt.Println()                          // align subsequent log entry
 		if response == nil && err != nil {
 			continue
 		} else {

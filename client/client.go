@@ -19,16 +19,22 @@ import (
 )
 
 func main() {
+	log.Println("Push started")
 	client := &http.Client{}
 
 	scanner.Scan(os.Args[1], func(appDir string, appFiles []models.AppFileFields) {
+		log.Println("Resource matching started")
 		request := resmatch.ResMatchRequest(integrityFields(appFiles))
 
+		log.Println("Resource matching sending request")
 		response := cliutil.Converse(client, request)
+		log.Println("Resource matching received response")
 
 		presentIffs := resmatch.ProcessResponse(response)
+		log.Println("Resource matching response demarshalled")
 
 		presentFiles := intersectAppFilesIntegrityFields(appFiles, presentIffs)
+		log.Println("Resource matching complete")
 
 		appFilesToUpload := make([]models.AppFileFields, len(appFiles))
 		copy(appFilesToUpload, appFiles)
@@ -50,17 +56,20 @@ func main() {
 
 			fileutils.TempFile("uploads", func(zipFile *os.File, err error) {
 				if hasFileToUpload {
-					log.Println("about to zipAppFiles")
+					log.Println("Zipping application files")
 					cliutil.Check(zipAppFiles(zipFile, appDir, uploadDir))
-					log.Println("zipAppFiles completed")
+					log.Println("Zipped application files")
 				}
 
-				log.Println("about to UploadApp")
+				log.Println("Uploading application")
 				appbits.UploadApp("test-guid", zipFile, presentFiles)
-				log.Println("UploadApp completed")
+				log.Println("Uploaded application")
+				log.Println("Deleting uploads file")
 			})
+			log.Println("Deleting upload directory")
 		})
 	})
+	log.Println("Push completed")
 }
 
 func deleteAppFile(appFiles []models.AppFileFields, path string) []models.AppFileFields {

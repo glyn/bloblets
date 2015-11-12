@@ -2,7 +2,6 @@ package resmatch
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"runtime"
 
@@ -25,6 +24,6 @@ func ProcessResponse(response []byte) []IntegrityFields {
 	responseFieldsColl := []IntegrityFields{}
 	err := json.Unmarshal(response, &responseFieldsColl)
 	cliutil.Check(err)
-	fmt.Printf("Returned SHA1s/Sizes: %#v\n", responseFieldsColl)
+	//	fmt.Printf("Returned SHA1s/Sizes: %#v\n", responseFieldsColl)
 	return responseFieldsColl
 }
