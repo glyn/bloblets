@@ -124,18 +124,18 @@ func integrityFields(affs []models.AppFileFields) []resmatch.IntegrityFields {
 }
 
 func intersectAppFilesIntegrityFields(appFiles []models.AppFileFields, integrityFields []resmatch.IntegrityFields) (out []models.AppFileFields) {
-	inputFiles := appFilesBySha(appFiles)
-	for _, responseFields := range integrityFields {
-		item, found := inputFiles[responseFields.Sha1]
+	ifs := integrityFieldsBySha(integrityFields)
+	for _, aff := range appFiles {
+		_, found := ifs[aff.Sha1]
 		if found {
-			out = append(out, item)
+			out = append(out, aff)
 		}
 	}
 	return out
 }
 
-func appFilesBySha(in []models.AppFileFields) (out map[string]models.AppFileFields) {
-	out = map[string]models.AppFileFields{} // FIXME
+func integrityFieldsBySha(in []resmatch.IntegrityFields) (out map[string]resmatch.IntegrityFields) {
+	out = map[string]resmatch.IntegrityFields{} // FIXME
 	for _, inputFileResource := range in {
 		out[inputFileResource.Sha1] = inputFileResource
 	}
