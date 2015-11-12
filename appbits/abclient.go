@@ -16,7 +16,6 @@ import (
 
 	basenet "net"
 
-	"github.com/cloudfoundry/cli/cf"
 	"github.com/cloudfoundry/cli/cf/api/resources"
 	"github.com/cloudfoundry/cli/cf/errors"
 	"github.com/cloudfoundry/cli/cf/models"
@@ -128,7 +127,7 @@ type Request struct {
 
 func newRequestForFile(method, fullUrl string, body *os.File) (req *Request, apiErr error) {
 
-	teePrinter := terminal.NewTeePrinter()
+	teePrinter := &cliutil.LoggingTeePrinter{}
 	ui := terminal.NewUI(os.Stdin, teePrinter)
 
 	progressReader := net.NewProgressReader(body, ui, 5*time.Second)
@@ -161,7 +160,7 @@ func newRequestForFile(method, fullUrl string, body *os.File) (req *Request, api
 func newRequest(request *http.Request, body io.ReadSeeker) (*Request, error) {
 	request.Header.Set("accept", "application/json")
 	request.Header.Set("content-type", "application/json")
-	request.Header.Set("User-Agent", "go-cli "+cf.Version+" / "+runtime.GOOS)
+	request.Header.Set("User-Agent", "bloblets client v0.1 / "+runtime.GOOS)
 	return &Request{HttpReq: request, SeekableBody: body}, nil
 }
 
@@ -238,29 +237,6 @@ func doRequestHandlingAuth(request *Request) (rawResponse *http.Response, err er
 
 	// perform request
 	rawResponse, err = gwDoRequestAndHandlerError(request)
-	//	if err == nil || gateway.authenticator == nil {
-	//		return
-	//	}
-	//
-	//	switch err.(type) {
-	//	case *errors.InvalidTokenError:
-	//		// refresh the auth token
-	//		var newToken string
-	//		newToken, err = gateway.authenticator.RefreshAuthToken()
-	//		if err != nil {
-	//			return
-	//		}
-	//
-	//		// reset the auth token and request body
-	//		httpReq.Header.Set("Authorization", newToken)
-	//		if request.SeekableBody != nil {
-	//			request.SeekableBody.Seek(0, 0)
-	//			httpReq.Body = ioutil.NopCloser(request.SeekableBody)
-	//		}
-	//
-	//		// make the request again
-	//		rawResponse, err = gateway.doRequestAndHandlerError(request)
-	//	}
 
 	return
 }
@@ -284,8 +260,6 @@ func gwDoRequest(request *http.Request) (response *http.Response, err error) {
 
 	httpClient := net.NewHttpClient(transport)
 
-	//	dumpRequest(request)
-
 	for i := 0; i < 3; i++ {
 		response, err = httpClient.Do(request)
 		if response == nil && err != nil {
@@ -295,26 +269,12 @@ func gwDoRequest(request *http.Request) (response *http.Response, err error) {
 		}
 	}
 
-	if err != nil {
-		return
-	}
-
-	//	dumpResponse(response)
-
-	//	header := http.CanonicalHeaderKey("X-Cf-Warnings")
-	//	raw_warnings := response.Header[header]
-	//	for _, raw_warning := range raw_warnings {
-	//		warning, _ := url.QueryUnescape(raw_warning)
-	//		*gateway.warnings = append(*gateway.warnings, warning)
-	//	}
-
 	return
 }
 
 func makeHttpTransport() *http.Transport {
 	return &http.Transport{
-		Dial: (&basenet.Dialer{Timeout: 5 * time.Second}).Dial,
-		//TLSClientConfig: NewTLSConfig(gateway.trustedCerts, gateway.config.IsSSLDisabled()),
+		Dial:  (&basenet.Dialer{Timeout: 5 * time.Second}).Dial,
 		Proxy: http.ProxyFromEnvironment,
 	}
 }
@@ -379,7 +339,7 @@ func gwNewRequest(request *http.Request, accessToken string, body io.ReadSeeker)
 
 	request.Header.Set("accept", "application/json")
 	request.Header.Set("content-type", "application/json")
-	request.Header.Set("User-Agent", "go-cli "+cf.Version+" / "+runtime.GOOS)
+	request.Header.Set("User-Agent", "bloblets client v0.1 / "+runtime.GOOS)
 	return &Request{HttpReq: request, SeekableBody: body}, nil
 }
 
