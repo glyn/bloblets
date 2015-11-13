@@ -87,9 +87,9 @@ func AppHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		dest.Close()
 		fn := dest.Name()
-		if !fi.IsDir() && fi.Size() > 65535 {
+		if !fi.IsDir() /* && fi.Size() > 65535 */ {
 			sha := sha(fn)
-			log.Printf("AppHandler adding file %s to the blob store: %s\n", f.Name, sha)
+			//			log.Printf("AppHandler adding file %s to the blob store: %s\n", f.Name, sha)
 			blobstore.Add(sha, fn)
 		}
 	}
