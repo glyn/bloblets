@@ -18,12 +18,6 @@ type directory struct {
 }
 
 func Scan(path string) (*directory, error) {
-	// recurses over the input directory path
-	// key = k1.With(k2)...With(kn) where ran files = {k1,...,kn}
-	// size is total size of files in this directory
-	// path is path of this directory
-	// files is the sha1 for each file in this directory
-
 	fi, err := os.Lstat(path)
 	if err != nil {
 		return nil, fmt.Errorf("Scan of %s failed: %s", path, err)
@@ -77,8 +71,4 @@ func subdirectories(dirPath string) ([]string, error) {
 	defer f.Close()
 
 	return f.Readdirnames(-1)
-}
-
-func (dir *directory) Condense(minBlobletSize int64) *app {
-	return nil
 }

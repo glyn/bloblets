@@ -48,5 +48,4 @@ var _ = Describe("Scanner", func() {
 		Expect(ok).To(BeTrue())
 		Expect(dir.bloblet).To(BeNil())
 	})
-
 })
