@@ -34,4 +34,22 @@ var _ = Describe("Hash", func() {
 			Expect(h).To(Equal(filehash.New("./test/file1")))
 		})
 	})
+
+	Describe("Remove", func() {
+		It("should invert the effects of Combine", func() {
+			h := filehash.New("./test/file1")
+			i := filehash.New("./test/file2")
+			h.Combine(i)
+			h.Remove(i)
+			Expect(h).To(Equal(filehash.New("./test/file1")))
+		})
+
+	})
+
+	Describe("StringToHash", func() {
+		It("should correctly convert a stringified hash", func() {
+			i := filehash.New("./test/file1")
+			Expect(filehash.StringToHash(i.String())).To(Equal(i))
+		})
+	})
 })

@@ -17,11 +17,12 @@ import (
 
 var _ = Describe("Consenser", func() {
 	It("should condense small directories", func() {
-		minSize := int64(4 * 65536)
+		minCompressedSize := int64(65536)
+		minSize := int64(4 * minCompressedSize)
 		dir, err := Scan("./test/fasterxml")
 		Expect(err).NotTo(HaveOccurred())
 
-		dir.Condense(minSize)
+		condensate := dir.Condense(minSize, minCompressedSize)
 
 		n, t, minc := dumpBloblets(dir, 0)
 		nb := dumpNonBloblets(dir, 0)
@@ -37,6 +38,8 @@ var _ = Describe("Consenser", func() {
 			children["test/fasterxml/jackson/databind"].
 			children["test/fasterxml/jackson/databind/deser"].
 			bloblet.size).To(Equal(int64(479705)))
+
+		Expect(len(condensate)).To(Equal(n + 1)) // there is one large file in the test data
 	})
 })
 

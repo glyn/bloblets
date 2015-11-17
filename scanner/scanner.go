@@ -6,6 +6,7 @@ import (
 	"github.com/cloudfoundry/cli/cf/app_files"
 	"github.com/cloudfoundry/cli/cf/models"
 	"github.com/cloudfoundry/cli/fileutils"
+	"github.com/glyn/bloblets/bloblet"
 	"github.com/glyn/bloblets/cliutil"
 )
 
@@ -30,11 +31,16 @@ func Scan(path string, processAppFiles func(appDir string, affs []models.AppFile
 }
 
 func doScan(appDir string, processAppFiles func(appDir string, affs []models.AppFileFields)) {
-	af := app_files.ApplicationFiles{}
 	log.Println("Scanning application files and computing SHA1s")
-	affs, err := af.AppFilesInDir(appDir)
+	affs, err := AppFilesInDir(appDir)
 	cliutil.Check(err)
 	log.Println("Scanned application files and computed SHA1s")
 
 	processAppFiles(appDir, affs)
+}
+
+// Returns bloblets and other files for resource matching.
+func AppFilesInDir(dir string) (appFiles []models.AppFileFields, err error) {
+	bloblet.Scan(dir)
+	return []models.AppFileFields{}, nil
 }

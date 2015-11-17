@@ -37,6 +37,14 @@ func (k Hash) String() string {
 	return fmt.Sprintf("%x", string(k))
 }
 
+func StringToHash(s string) Hash {
+	var sh string
+	if _, err := fmt.Sscanf(s, "%x", &sh); err != nil {
+		panic(err)
+	}
+	return Hash(sh)
+}
+
 func (h1 Hash) Combine(h2 Hash) {
 	if len(h1) != len(h2) {
 		panic("Invalid hash length")
@@ -44,4 +52,8 @@ func (h1 Hash) Combine(h2 Hash) {
 	for i, b := range h1 {
 		h1[i] = b ^ h2[i]
 	}
+}
+
+func (h1 Hash) Remove(h2 Hash) {
+	h1.Combine(h2)
 }
