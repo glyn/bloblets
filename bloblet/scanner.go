@@ -9,6 +9,10 @@ import (
 	"github.com/glyn/bloblets/bloblet/filehash"
 )
 
+type Condenser interface {
+	Condense(minBlobletSize, minCompressedBlobletSize int64) []models.AppFileFields
+}
+
 type directory struct {
 	path     string
 	hash     filehash.Hash
@@ -19,9 +23,14 @@ type directory struct {
 }
 
 func Scan(path string) (*directory, error) {
-	fi, err := os.Lstat(path)
+	return doScan(path, ".")
+}
+
+func doScan(appDir, path string) (*directory, error) {
+	fullPath := filepath.Join(appDir, path)
+	fi, err := os.Lstat(fullPath)
 	if err != nil {
-		return nil, fmt.Errorf("Scan of %s failed: %s", path, err)
+		return nil, fmt.Errorf("Scan of %s for path %s failed: %s", appDir, path, err)
 	}
 
 	if !fi.IsDir() {
@@ -36,31 +45,32 @@ func Scan(path string) (*directory, error) {
 		children: make(map[string]*directory, 10),
 	}
 
-	f, err := os.Open(path)
+	f, err := os.Open(fullPath)
 	if err != nil {
-		return nil, fmt.Errorf("Scan of %s failed on Open: %s", path, err)
+		return nil, fmt.Errorf("Scan of %s failed on Open: %s", fullPath, err)
 	}
 	fis, err := f.Readdir(-1)
 	if err != nil {
-		return nil, fmt.Errorf("Scan of %s failed on Readdir: %s", path, err)
+		return nil, fmt.Errorf("Scan of %s failed on Readdir: %s", fullPath, err)
 	}
 
 	for _, fi := range fis {
-		fp := filepath.Join(path, fi.Name())
+		fp := filepath.Join(fullPath, fi.Name())
+		fpRelative := filepath.Join(path, fi.Name())
 		if !fi.IsDir() {
 			h := filehash.New(fp)
 			dir.files[fp] = &models.AppFileFields{
 				Sha1: h.String(),
 				Size: fi.Size(),
-				Path: fp,
+				Path: fpRelative,
 				Mode: fmt.Sprintf("%#o", fi.Mode()),
 			}
 			dir.size += fi.Size()
 			dir.hash.Combine(h)
 		} else {
-			s, err := Scan(fp)
+			s, err := doScan(appDir, fpRelative)
 			if err != nil {
-				return nil, fmt.Errorf("Scan of %s failed to scan subdirectory %s: %s", path, fp, err)
+				return nil, fmt.Errorf("Scan of %s failed to scan subdirectory %s: %s", fullPath, fp, err)
 			}
 			dir.children[fp] = s
 		}

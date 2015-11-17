@@ -13,6 +13,7 @@ import (
 	"github.com/cloudfoundry/cli/cf/models"
 	"github.com/cloudfoundry/cli/fileutils"
 	"github.com/glyn/bloblets/appbits"
+	"github.com/glyn/bloblets/bloblet"
 	"github.com/glyn/bloblets/cliutil"
 	"github.com/glyn/bloblets/resmatch"
 	"github.com/glyn/bloblets/scanner"
@@ -28,7 +29,7 @@ func main() {
 	client := &http.Client{}
 	server := os.Args[1]
 
-	scanner.Scan(os.Args[2], func(appDir string, appFiles []models.AppFileFields) {
+	scanner.Scan(os.Args[2], func(appDir string, condenser bloblet.Condensate, appFiles []models.AppFileFields) {
 		log.Println("Resource matching started")
 		request := resmatch.ResMatchRequest(server, integrityFields(appFiles))
 
@@ -58,7 +59,12 @@ func main() {
 		fileutils.TempDir("upload-dir", func(uploadDir string, err error) {
 			cliutil.Check(err)
 
+			var blobletsToUpload []bloblet.Bloblet
+			blobletsToUpload, appFilesToUpload = condenser.Bloblets(appFilesToUpload)
+
 			cliutil.Check(app_files.ApplicationFiles{}.CopyFiles(appFilesToUpload, appDir, uploadDir))
+			// FIXME: upload these as HTTP parts
+			_ = blobletsToUpload
 
 			fileutils.TempFile("uploads", func(zipFile *os.File, err error) {
 				if hasFileToUpload {

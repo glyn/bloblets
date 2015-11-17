@@ -10,7 +10,7 @@ import (
 	"github.com/glyn/bloblets/cliutil"
 )
 
-func Scan(path string, processAppFiles func(appDir string, affs []models.AppFileFields)) {
+func Scan(path string, processAppFiles func(appDir string, condensate bloblet.Condensate, affs []models.AppFileFields)) {
 	zipper := app_files.ApplicationZipper{}
 
 	if zipper.IsZipFile(path) {
@@ -30,17 +30,22 @@ func Scan(path string, processAppFiles func(appDir string, affs []models.AppFile
 	}
 }
 
-func doScan(appDir string, processAppFiles func(appDir string, affs []models.AppFileFields)) {
+func doScan(appDir string, processAppFiles func(appDir string, condensate bloblet.Condensate, affs []models.AppFileFields)) {
 	log.Println("Scanning application files and computing SHA1s")
-	affs, err := AppFilesInDir(appDir)
+	affs, condensate, err := AppFilesInDir(appDir)
 	cliutil.Check(err)
 	log.Println("Scanned application files and computed SHA1s")
 
-	processAppFiles(appDir, affs)
+	processAppFiles(appDir, condensate, affs)
 }
 
 // Returns bloblets and other files for resource matching.
-func AppFilesInDir(dir string) (appFiles []models.AppFileFields, err error) {
-	bloblet.Scan(dir)
-	return []models.AppFileFields{}, nil
+func AppFilesInDir(dir string) (appFiles []models.AppFileFields, condensate bloblet.Condensate, err error) {
+	d, err := bloblet.Scan(dir)
+	if err != nil {
+		return []models.AppFileFields{}, nil, err
+	}
+
+	affs := d.Condense(int64(4*65536), int64(65536))
+	return affs, d, nil
 }
