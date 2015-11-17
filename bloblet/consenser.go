@@ -2,6 +2,9 @@ package bloblet
 
 import "github.com/glyn/bloblets/bloblet/filehash"
 
+var noChildren = make(map[string]filehash.Hash)
+var zeroHash = filehash.Zero()
+
 func (dir *directory) Condense(minBlobletSize int64) *app {
 	for _, child := range dir.children {
 		child.Condense(minBlobletSize)
@@ -9,6 +12,11 @@ func (dir *directory) Condense(minBlobletSize int64) *app {
 			addAll(dir.files, child.files)
 			dir.size += child.size
 			dir.hash.Combine(child.hash)
+
+			// Show child has been condensed into parent
+			child.files = noChildren
+			child.size = 0
+			child.hash = zeroHash
 		}
 	}
 

@@ -12,7 +12,7 @@ type directory struct {
 	path     string
 	hash     filehash.Hash
 	size     int64
-	files    map[string]filehash.Hash // dom files is a set of file names, TODO: do we need file sizes too, and poss. filemodes
+	files    map[string]filehash.Hash
 	children map[string]*directory
 	bloblet  *bloblet // non-nil iff this directory has an associated bloblet
 }
