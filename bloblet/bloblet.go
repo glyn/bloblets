@@ -6,6 +6,7 @@ import (
 
 	"path/filepath"
 
+	"github.com/cloudfoundry/cli/cf/models"
 	"github.com/cloudfoundry/gofileutils/fileutils"
 	"github.com/glyn/bloblets/bloblet/filehash"
 )
@@ -19,7 +20,7 @@ type bloblet struct {
 	path  string
 	hash  filehash.Hash
 	size  int64
-	files map[string]filehash.Hash
+	files map[string]*models.AppFileFields
 }
 
 func (b *bloblet) Compress(dir string) error {

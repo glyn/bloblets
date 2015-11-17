@@ -1,8 +1,11 @@
 package bloblet
 
-import "github.com/glyn/bloblets/bloblet/filehash"
+import (
+	"github.com/cloudfoundry/cli/cf/models"
+	"github.com/glyn/bloblets/bloblet/filehash"
+)
 
-var noChildren = make(map[string]filehash.Hash)
+var noChildren = make(map[string]*models.AppFileFields)
 var zeroHash = filehash.Zero()
 
 func (dir *directory) Condense(minBlobletSize int64) *app {
@@ -31,7 +34,7 @@ func (dir *directory) Condense(minBlobletSize int64) *app {
 	return nil
 }
 
-func addAll(m1, m2 map[string]filehash.Hash) {
+func addAll(m1, m2 map[string]*models.AppFileFields) {
 	for k, v := range m2 {
 		m1[k] = v
 	}

@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/cloudfoundry/cli/cf/models"
 	"github.com/glyn/bloblets/bloblet/filehash"
 )
 
@@ -12,7 +13,7 @@ type directory struct {
 	path     string
 	hash     filehash.Hash
 	size     int64
-	files    map[string]filehash.Hash
+	files    map[string]*models.AppFileFields
 	children map[string]*directory
 	bloblet  *bloblet // non-nil iff this directory has an associated bloblet
 }
@@ -31,7 +32,7 @@ func Scan(path string) (*directory, error) {
 		path:     path,
 		hash:     filehash.Zero(),
 		size:     0,
-		files:    make(map[string]filehash.Hash, 50),
+		files:    make(map[string]*models.AppFileFields, 50),
 		children: make(map[string]*directory, 10),
 	}
 
@@ -48,7 +49,12 @@ func Scan(path string) (*directory, error) {
 		fp := filepath.Join(path, fi.Name())
 		if !fi.IsDir() {
 			h := filehash.New(fp)
-			dir.files[fp] = h
+			dir.files[fp] = &models.AppFileFields{
+				Sha1: h.String(),
+				Size: fi.Size(),
+				Path: fp,
+				Mode: fmt.Sprintf("%#o", fi.Mode()),
+			}
 			dir.size += fi.Size()
 			dir.hash.Combine(h)
 		} else {
