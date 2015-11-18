@@ -1,6 +1,6 @@
 # Protype of cf push performance
 
-To use the prototype, clone this repository:
+To use the prototype, clone this repository (this may take several minutes as it includes some large test files):
 ```
 git clone https://github.com/glyn/bloblets.git
 ```
