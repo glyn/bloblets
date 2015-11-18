@@ -79,13 +79,13 @@ func condenseApp(appDir string) {
 	dir, err := Scan(appDir)
 	Expect(err).NotTo(HaveOccurred())
 
-	dir.Condense(minSize, minCompressedSize)
+	files := dir.Condense(minSize, minCompressedSize)
 
 	n, t, minc := dumpBloblets(dir, 0)
 	nb := dumpNonBloblets(dir, 0)
 
 	fmt.Printf("%s with min size %d produced %d bloblets of average size %d KB, minimum compressed size %d KB, and %d non-bloblets\n",
-		appDir, minSize, n, t/(int64(n)*1024), minc/1024, nb)
+		appDir, minSize, n, t/(int64(n)*1024), minc/1024, len(files)-nb)
 }
 
 const details = false
