@@ -1,0 +1,16 @@
+<grails>
+  <resources>
+    <resource>BootStrap</resource>
+    <resource>BuildConfig</resource>
+    <resource>Config</resource>
+    <resource>DataSource</resource>
+    <resource>resources</resource>
+    <resource>UrlMappings</resource>
+    <resource>com.gopivotal.cloudfoundry.test.ApplicationController</resource>
+    <resource>com.gopivotal.cloudfoundry.test.DataSourceController</resource>
+    <resource>com.gopivotal.cloudfoundry.test.MongoDbController</resource>
+    <resource>com.gopivotal.cloudfoundry.test.RabbitController</resource>
+    <resource>com.gopivotal.cloudfoundry.test.RedisController</resource>
+  </resources>
+  <plugins />
+</grails>

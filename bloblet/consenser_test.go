@@ -41,7 +41,54 @@ var _ = Describe("Consenser", func() {
 
 		Expect(len(condensate)).To(Equal(n + 1)) // there is one large file in the test data
 	})
+
+	PContext("when condensing large, real-world applications", func() {
+		It("should condense a Java application", func() {
+			condenseApp("./test/apps/java/zipkin-web")
+		})
+
+		It("should condense a Spring Boot application", func() {
+			By("sagan-indexer")
+			condenseApp("./test/apps/boot/sagan-indexer")
+
+			By("sagan-site")
+			condenseApp("./test/apps/boot/sagan-site")
+		})
+
+		It("should condense a Grooovy application", func() {
+			By("grails-application-1.0.0.BUILD-SNAPSHOT")
+			condenseApp("./test/apps/groovy/grails-application-1.0.0.BUILD-SNAPSHOT")
+
+			By("groovy-binary-2.2.1")
+			condenseApp("./test/apps/groovy/groovy-binary-2.2.1")
+		})
+
+		It("should condense a Node application", func() {
+			condenseApp("./test/apps/node/ghost")
+		})
+
+		It("should condense a Ruby application", func() {
+			condenseApp("./test/apps/ruby/rails_sample_app-master")
+		})
+	})
 })
+
+func condenseApp(appDir string) {
+	minCompressedSize := int64(65536)
+	minSize := int64(4 * minCompressedSize)
+	dir, err := Scan(appDir)
+	Expect(err).NotTo(HaveOccurred())
+
+	dir.Condense(minSize, minCompressedSize)
+
+	n, t, minc := dumpBloblets(dir, 0)
+	nb := dumpNonBloblets(dir, 0)
+
+	fmt.Printf("%s with min size %d produced %d bloblets of average size %d KB, minimum compressed size %d KB, and %d non-bloblets\n",
+		appDir, minSize, n, t/(int64(n)*1024), minc/1024, nb)
+}
+
+const details = false
 
 func dumpBloblets(dir *directory, indent int) (int, int64, int64) {
 	var numBloblets int = 0
@@ -50,8 +97,10 @@ func dumpBloblets(dir *directory, indent int) (int, int64, int64) {
 	if dir.bloblet != nil {
 		cr := compressedSize(dir.bloblet)
 		minCompressedSize = cr
-		fmt.Printf(strings.Repeat(" ", indent))
-		spew.Printf("Bloblet @ %s of size %d, compressed size %d\n", dir.bloblet.path, dir.bloblet.size, cr)
+		if details {
+			fmt.Printf(strings.Repeat(" ", indent))
+			spew.Printf("Bloblet @ %s of size %d, compressed size %d\n", dir.bloblet.path, dir.bloblet.size, cr)
+		}
 		totalSize += dir.bloblet.size
 		numBloblets++
 

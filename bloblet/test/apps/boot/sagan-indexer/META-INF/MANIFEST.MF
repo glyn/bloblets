@@ -1,0 +1,5 @@
+Manifest-Version: 1.0
+Start-Class: sagan.IndexerMain
+Spring-Boot-Version: 1.2.7.RELEASE
+Main-Class: org.springframework.boot.loader.JarLauncher
+
