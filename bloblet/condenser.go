@@ -17,9 +17,9 @@ type Condensate interface {
 	Bloblets([]models.AppFileFields) ([]Bloblet, []models.AppFileFields)
 }
 
-const blobletFileName = "com-github-glyn-bloblet.zip"
+const BlobletFileName = "com-github-glyn-bloblet.zip"
 
-var blobletFileNamePathTerminator = filepath.Join("", blobletFileName)
+var blobletFileNamePathTerminator = filepath.Join("", BlobletFileName)
 
 var noFiles = make(map[string]*models.AppFileFields)
 var zeroHash = filehash.Zero()
@@ -70,7 +70,7 @@ func (dir *directory) Condense(minBlobletSize, minCompressedBlobletSize int64) [
 			files: dir.files,
 		}
 		affs = append(affs, models.AppFileFields{
-			Path: filepath.Join(dir.path, blobletFileName),
+			Path: filepath.Join(dir.path, BlobletFileName),
 			Sha1: dir.hash.String(),
 			Size: dir.size,
 			Mode: "0755", // precise value unimportant
