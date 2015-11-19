@@ -31,7 +31,7 @@ func main() {
 	client := &http.Client{}
 	server := os.Args[1]
 
-	scanner.Scan(os.Args[2], func(appDir string, condenser bloblet.Condensate, appFiles []models.AppFileFields) {
+	scanner.Scan(os.Args[2], func(appDir string, condensate bloblet.Condensate, appFiles []models.AppFileFields) {
 		log.Println("Resource matching started")
 		request := resmatch.ResMatchRequest(server, integrityFields(appFiles))
 
@@ -62,21 +62,19 @@ func main() {
 			cliutil.Check(err)
 
 			var blobletsToUpload []bloblet.Bloblet
-			blobletsToUpload, appFilesToUpload = condenser.Bloblets(appFilesToUpload)
+			blobletsToUpload, appFilesToUpload = condensate.Bloblets(appFilesToUpload)
 
 			cliutil.Check(app_files.ApplicationFiles{}.CopyFiles(appFilesToUpload, appDir, uploadDir))
-			// FIXME: upload these as HTTP parts
-			_ = blobletsToUpload
 
 			fileutils.TempFile("uploads", func(zipFile *os.File, err error) {
 				if hasFileToUpload {
 					log.Println("Zipping application files")
-					cliutil.Check(zipAppFiles(zipFile, appDir, uploadDir))
+					cliutil.Check(zipWithBetterErrors(uploadDir, zipFile))
 					log.Println("Zipped application files")
 				}
 
 				log.Println("Uploading application")
-				appbits.UploadApp(server, "test-guid", zipFile, presentFiles)
+				appbits.UploadApp(server, "test-guid", zipFile, blobletsToUpload, presentFiles)
 				log.Println("Uploaded application")
 				log.Println("Deleting uploads file")
 			})
@@ -112,7 +110,7 @@ func PopulateFileMode(appDir string, presentFiles []models.AppFileFields) ([]mod
 	return presentFiles, nil
 }
 
-func zipAppFiles(zipFile *os.File, appDir string, uploadDir string) (zipErr error) {
+func zipAppFiles(zipFile *os.File, uploadDir string) (zipErr error) {
 	zipErr = zipWithBetterErrors(uploadDir, zipFile)
 	if zipErr != nil {
 		return
@@ -138,7 +136,7 @@ func zipWithBetterErrors(uploadDir string, zipFile *os.File) error {
 }
 
 func integrityFields(affs []models.AppFileFields) []resmatch.IntegrityFields {
-	ifs := []resmatch.IntegrityFields{} // FIXME: make([]resmatch.IntegrityFields, 0, len(affs))
+	ifs := make([]resmatch.IntegrityFields, 0, len(affs))
 
 	for _, aff := range affs {
 		ifs = append(ifs, resmatch.IntegrityFields{
@@ -162,7 +160,7 @@ func intersectAppFilesIntegrityFields(appFiles []models.AppFileFields, integrity
 }
 
 func appFilesBySha(in []models.AppFileFields) (out map[string]models.AppFileFields) {
-	out = map[string]models.AppFileFields{} // FIXME
+	out = make(map[string]models.AppFileFields, len(in))
 	for _, inputFileResource := range in {
 		out[inputFileResource.Sha1] = inputFileResource
 	}

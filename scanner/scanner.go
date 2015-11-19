@@ -46,6 +46,8 @@ func AppFilesInDir(dir string) (appFiles []models.AppFileFields, condensate blob
 		return []models.AppFileFields{}, nil, err
 	}
 
+	log.Println("Condensing")
+
 	affs := d.Condense(int64(4*65536), int64(65536))
 	return affs, d, nil
 }

@@ -23,6 +23,7 @@ import (
 	"github.com/cloudfoundry/cli/cf/net"
 	"github.com/cloudfoundry/cli/cf/terminal"
 	"github.com/cloudfoundry/cli/fileutils"
+	"github.com/glyn/bloblets/bloblet"
 	"github.com/glyn/bloblets/cliutil"
 )
 
@@ -30,7 +31,7 @@ const (
 	DefaultAppUploadBitsTimeout = 15 * time.Minute
 )
 
-func UploadApp(server, appGuid string, zipFile *os.File, presentFiles []models.AppFileFields) {
+func UploadApp(server, appGuid string, zipFile *os.File, bloblets []bloblet.Bloblet, presentFiles []models.AppFileFields) {
 	afrs := make([]resources.AppFileResource, 0, len(presentFiles))
 	for _, pf := range presentFiles {
 		afrs = append(afrs, resources.AppFileResource{
@@ -40,10 +41,10 @@ func UploadApp(server, appGuid string, zipFile *os.File, presentFiles []models.A
 			Mode: pf.Mode,
 		})
 	}
-	uploadBits(server, appGuid, zipFile, afrs)
+	uploadBits(server, appGuid, zipFile, bloblets, afrs)
 }
 
-func uploadBits(server, appGuid string, zipFile *os.File, presentFiles []resources.AppFileResource) {
+func uploadBits(server, appGuid string, zipFile *os.File, bloblets []bloblet.Bloblet, presentFiles []resources.AppFileResource) {
 	apiUrl := fmt.Sprintf("http://%s/v2/apps/%s/bits", server, appGuid)
 	fileutils.TempFile("requests", func(requestFile *os.File, err error) {
 		cliutil.Check(err)
@@ -56,7 +57,7 @@ func uploadBits(server, appGuid string, zipFile *os.File, presentFiles []resourc
 		presentFilesJSON, err := json.Marshal(presentFiles)
 		cliutil.Check(err)
 
-		boundary, err := writeUploadBody(zipFile, requestFile, presentFilesJSON)
+		boundary, err := writeUploadBody(zipFile, requestFile, bloblets, presentFilesJSON)
 		cliutil.Check(err)
 
 		var request *Request
@@ -72,12 +73,13 @@ func uploadBits(server, appGuid string, zipFile *os.File, presentFiles []resourc
 	})
 }
 
-func writeUploadBody(zipFile *os.File, body *os.File, presentResourcesJson []byte) (boundary string, err error) {
+func writeUploadBody(zipFile *os.File, body *os.File, bloblets []bloblet.Bloblet, presentResourcesJson []byte) (boundary string, err error) {
 	writer := multipart.NewWriter(body)
 	defer writer.Close()
 
 	boundary = writer.Boundary()
 
+	// Create part for resources already present in the blob store.
 	part, err := writer.CreateFormField("resources")
 	if err != nil {
 		return
@@ -88,6 +90,7 @@ func writeUploadBody(zipFile *os.File, body *os.File, presentResourcesJson []byt
 		return
 	}
 
+	// Create part for the application zip file, if there is one.
 	if zipFile != nil {
 		zipStats, zipErr := zipFile.Stat()
 		if zipErr != nil {
@@ -109,6 +112,16 @@ func writeUploadBody(zipFile *os.File, body *os.File, presentResourcesJson []byt
 		}
 	}
 
+	// Create one part per bloblet.
+	for i, b := range bloblets {
+		var part io.Writer
+		part, err = createBlobletPartWriter(i, b.Path(), b.Size(), b.Hash(), writer)
+		if err != nil {
+			return
+		}
+		b.Write(part)
+	}
+
 	return
 }
 
@@ -117,6 +130,15 @@ func createZipPartWriter(zipStats os.FileInfo, writer *multipart.Writer) (io.Wri
 	h.Set("Content-Disposition", `form-data; name="application"; filename="application.zip"`)
 	h.Set("Content-Type", "application/zip")
 	h.Set("Content-Length", fmt.Sprintf("%d", zipStats.Size()))
+	h.Set("Content-Transfer-Encoding", "binary")
+	return writer.CreatePart(h)
+}
+
+func createBlobletPartWriter(i int, path string, size int64, hash string, writer *multipart.Writer) (io.Writer, error) {
+	h := make(textproto.MIMEHeader)
+	h.Set("Content-Disposition", fmt.Sprintf(`form-data; name="bloblet-%d"; path="%s"; filename="%s"; hash="%s"`, i, path, bloblet.BlobletFileName, hash))
+	h.Set("Content-Type", "application/zip")
+	h.Set("Content-Length", fmt.Sprintf("%d", size))
 	h.Set("Content-Transfer-Encoding", "binary")
 	return writer.CreatePart(h)
 }

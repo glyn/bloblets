@@ -125,12 +125,13 @@ func compressedSize(b *bloblet) int64 {
 	}
 	defer os.RemoveAll(d)
 
-	err = b.Compress(d)
+	zipPath := filepath.Join(d, "bloblet.zip")
+	err = b.Compress(zipPath)
 	if err != nil {
 		panic(err)
 	}
 
-	fi, err := os.Lstat(filepath.Join(d, "bloblet.zip"))
+	fi, err := os.Lstat(zipPath)
 	if err != nil {
 		panic(err)
 	}

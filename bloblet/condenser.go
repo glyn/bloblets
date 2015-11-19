@@ -10,9 +10,6 @@ import (
 	"github.com/glyn/bloblets/bloblet/filehash"
 )
 
-type Bloblet interface {
-}
-
 type Condensate interface {
 	Bloblets([]models.AppFileFields) ([]Bloblet, []models.AppFileFields)
 }
