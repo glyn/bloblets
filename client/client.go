@@ -8,6 +8,8 @@ import (
 
 	"log"
 
+	"strings"
+
 	"github.com/cloudfoundry/cli/cf/app_files"
 	"github.com/cloudfoundry/cli/cf/errors"
 	"github.com/cloudfoundry/cli/cf/models"
@@ -96,7 +98,11 @@ func deleteAppFile(appFiles []models.AppFileFields, path string) []models.AppFil
 
 func PopulateFileMode(appDir string, presentFiles []models.AppFileFields) ([]models.AppFileFields, error) {
 	for i, _ := range presentFiles {
-		fileInfo, err := os.Lstat(filepath.Join(appDir, presentFiles[i].Path))
+		path := presentFiles[i].Path
+		if strings.HasSuffix(path, bloblet.BlobletFileNamePathTerminator) {
+			continue // filemode makes no sense for a bloblet
+		}
+		fileInfo, err := os.Lstat(filepath.Join(appDir, path))
 		if err != nil {
 			return presentFiles, err
 		}

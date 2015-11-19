@@ -19,7 +19,7 @@ type Condensate interface {
 
 const BlobletFileName = "com-github-glyn-bloblet.zip"
 
-var blobletFileNamePathTerminator = filepath.Join("", BlobletFileName)
+var BlobletFileNamePathTerminator = filepath.Join("", BlobletFileName)
 
 var noFiles = make(map[string]*models.AppFileFields)
 var zeroHash = filehash.Zero()
@@ -108,14 +108,14 @@ func (dir *directory) Bloblets(affs []models.AppFileFields) ([]Bloblet, []models
 }
 
 func (dir *directory) findBloblet(path string) Bloblet {
-	if !strings.HasSuffix(path, blobletFileNamePathTerminator) {
+	if !strings.HasSuffix(path, BlobletFileNamePathTerminator) {
 		return nil
 	}
 	var p string
-	if path == blobletFileNamePathTerminator {
+	if path == BlobletFileNamePathTerminator {
 		p = "."
 	} else {
-		p = path[:len(path)-len(blobletFileNamePathTerminator)-1]
+		p = path[:len(path)-len(BlobletFileNamePathTerminator)-1]
 	}
 	b, ok := dir.findBlobletWithPath(p)
 	if !ok {
