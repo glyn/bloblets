@@ -35,38 +35,42 @@ func AppHandler(w http.ResponseWriter, r *http.Request) {
 	r.ParseMultipartForm(100 * 1024 * 1024)
 	mpForm := r.MultipartForm
 
-	// Unzip the uploaded portion of the application.
-	application := mpForm.File["application"][0]
-	zipFile, err := application.Open()
-	if err != nil {
-		servutil.Fail(w, "failed to open application zip: %s", err)
-		return
-	}
-	cl := application.Header.Get("Content-Length")
-	if cl == "" {
-		servutil.Fail(w, "Content-Length header not supplied for application zip: %s", err)
-		return
-	}
-	zipLen, err := strconv.ParseInt(cl, 10, 64)
-	if err != nil {
-		servutil.Fail(w, "Invalid Content-Length %s: %s", cl, err)
-		return
-	}
+	// Unzip any uploaded portion of the application.
+	appHdrs, ok := mpForm.File["application"]
+	if ok {
 
-	zr, err := zip.NewReader(zipFile, zipLen)
-
-	for _, f := range zr.File {
-		fi, fn, err := unzipFile(f, appDir, w)
+		application := appHdrs[0]
+		zipFile, err := application.Open()
 		if err != nil {
+			servutil.Fail(w, "failed to open application zip: %s", err)
 			return
 		}
-		if !fi.IsDir() && fi.Size() > 65535 {
-			sha := sha(fn)
-			//			log.Printf("AppHandler adding file %s to the blob store: %s\n", f.Name, sha)
-			blobstore.Add(sha, fn)
+		cl := application.Header.Get("Content-Length")
+		if cl == "" {
+			servutil.Fail(w, "Content-Length header not supplied for application zip: %s", err)
+			return
 		}
+		zipLen, err := strconv.ParseInt(cl, 10, 64)
+		if err != nil {
+			servutil.Fail(w, "Invalid Content-Length %s: %s", cl, err)
+			return
+		}
+
+		zr, err := zip.NewReader(zipFile, zipLen)
+
+		for _, f := range zr.File {
+			fi, fn, err := unzipFile(f, appDir, w)
+			if err != nil {
+				return
+			}
+			if !fi.IsDir() && fi.Size() > 65535 {
+				sha := sha(fn)
+				//			log.Printf("AppHandler adding file %s to the blob store: %s\n", f.Name, sha)
+				blobstore.Add(sha, fn)
+			}
+		}
+		log.Println("AppHandler unzipped uploaded portion of application")
 	}
-	log.Println("AppHandler unzipped uploaded portion of application")
 
 	// Process any uploaded bloblets.
 	for i := 0; true; i++ {
