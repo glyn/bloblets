@@ -42,7 +42,7 @@ var _ = Describe("Consenser", func() {
 		Expect(len(condensate)).To(Equal(n + 1)) // there is one large file in the test data
 	})
 
-	PContext("when condensing large, real-world applications", func() {
+	Context("when condensing large, real-world applications", func() {
 		It("should condense a Java application", func() {
 			condenseApp("./test/apps/java/zipkin-web")
 		})
