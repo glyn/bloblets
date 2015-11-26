@@ -1,69 +1,138 @@
 package blobstore
 
 import (
-	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
-	"os/exec"
-	"path/filepath"
-	"sync"
+	"time"
+
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
 )
 
-var blobDir string
-var mu sync.Mutex
+var (
+	service    *s3.S3
+	bucketName string
+)
 
 func init() {
-	var err error
-	blobDir, err = ioutil.TempDir("", "blobstore")
-	if err != nil {
-		panic("Failed to create blobstore: " + err.Error())
-	}
+	// See: http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region
+	service, bucketName = createService("s3.amazonaws.com", "us-east-1")
 }
 
 func Present(key string) bool {
-	mu.Lock()
-	defer mu.Unlock()
-	return present(key)
+	return head(service, bucketName, key)
 }
 
 func Add(key, src string) {
-	mu.Lock()
-	defer mu.Unlock()
-	dest := pathOf(key)
-	if present(key) {
-		err := exec.Command("cmp", src, dest).Run()
-		if err, ok := err.(*exec.ExitError); ok {
-			panic(fmt.Sprintf("Cannot add file %s: key %s already present in blobstore", src, key))
-		} else if err != nil {
-			panic("Add failed: " + err.Error())
-		}
-		// Files are equal
-		return
-	}
-	copyFile(dest, src)
+	put(service, bucketName, key, src)
 }
 
 func Get(key, dest string) {
-	mu.Lock()
-	defer mu.Unlock()
-	if !present(key) {
-		panic("Key not present")
+	get(service, bucketName, key, dest)
+}
+
+func Terminate() {
+	defer service.DeleteBucket(&s3.DeleteBucketInput{Bucket: stringPtr(bucketName)})
+	emptyBucket(service, bucketName)
+}
+
+func createService(endpoint, region string) (*s3.S3, string) {
+	session := session.New()
+	session.Config.Endpoint = stringPtr(endpoint)
+	session.Config.Region = stringPtr(region)
+
+	service := s3.New(session)
+	bucketName := "com-github-glyn-bloblets-blobstore"
+
+	_, err := service.HeadBucket(&s3.HeadBucketInput{Bucket: stringPtr(bucketName)})
+	if err != nil {
+
+		for i := 0; i < 10; i++ {
+			_, err = service.CreateBucket(&s3.CreateBucketInput{Bucket: stringPtr(bucketName)})
+			if err == nil {
+				break
+			}
+		}
+		if err != nil {
+			panic(err)
+		}
+
+		for i := 0; i < 30; i++ {
+			_, err = service.HeadBucket(&s3.HeadBucketInput{Bucket: stringPtr(bucketName)})
+			if err == nil {
+				break
+			}
+			time.Sleep(time.Second)
+		}
+		if err != nil {
+			panic(err)
+		}
 	}
-	copyFile(dest, pathOf(key))
+
+	emptyBucket(service, bucketName)
+
+	return service, bucketName
 }
 
-func pathOf(key string) string {
-	return filepath.Join(blobDir, key)
+func put(service *s3.S3, bucketName string, key, path string) {
+	f, err := os.Open(path)
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+
+	_, err = service.PutObject(&s3.PutObjectInput{
+		Bucket: stringPtr(bucketName),
+		Key:    stringPtr(key),
+		Body:   f,
+	})
+	if err != nil {
+		panic(err)
+	}
 }
 
-func present(key string) bool {
-	_, err := os.Lstat(pathOf(key))
+func get(service *s3.S3, bucketName string, key, path string) {
+	obj, err := service.GetObject(&s3.GetObjectInput{
+		Bucket: stringPtr(bucketName),
+		Key:    stringPtr(key),
+	})
+	if err != nil {
+		panic(err)
+	}
+	defer obj.Body.Close()
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0755)
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+	_, err = io.Copy(f, obj.Body)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func head(service *s3.S3, bucketName string, key string) bool {
+	_, err := service.HeadObject(&s3.HeadObjectInput{
+		Bucket: stringPtr(bucketName),
+		Key:    stringPtr(key),
+	})
 	return err == nil
 }
 
-func copyFile(dest, src string) {
-	err := exec.Command("cp", src, dest).Run()
+func emptyBucket(service *s3.S3, bucketName string) {
+	objs, err := service.ListObjects(&s3.ListObjectsInput{Bucket: stringPtr(bucketName)})
 	if err != nil {
-		panic("copyFile failed: " + err.Error())
+		panic(err)
 	}
+
+	for _, o := range objs.Contents {
+		_, err := service.DeleteObject(&s3.DeleteObjectInput{Bucket: stringPtr(bucketName), Key: o.Key})
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
+func stringPtr(s string) *string {
+	return &s
 }
