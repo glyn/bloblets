@@ -2,9 +2,7 @@ package appbits
 
 import (
 	"archive/zip"
-	"crypto/sha1"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"path/filepath"
@@ -14,7 +12,6 @@ import (
 	"io/ioutil"
 
 	"github.com/cloudfoundry/cli/cf/api/resources"
-	"github.com/cloudfoundry/gofileutils/fileutils"
 	"github.com/glyn/bloblets/blobstore"
 	"github.com/glyn/bloblets/servutil"
 
@@ -82,18 +79,12 @@ func AppHandler(w http.ResponseWriter, r *http.Request) {
 
 			io.Copy(dest, of)
 			of.Close()
-			fi, err := dest.Stat()
+			_, err = dest.Stat()
 			if err != nil {
 				servutil.Fail(w, "Failed to stat application file: %s", err)
 				return
 			}
 			dest.Close()
-			fn := dest.Name()
-			if !fi.IsDir() && fi.Size() > 65535 {
-				sha := sha(fn)
-				log.Printf("AppHandler adding file %s to the blob store: %s\n", f.Name, sha)
-				blobstore.Add(sha, fn)
-			}
 		}
 		log.Println("AppHandler unzipped uploaded portion of application")
 	}
@@ -118,13 +109,4 @@ func AppHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Println("AppHandler exiting")
-}
-
-func sha(path string) string {
-	hash := sha1.New()
-	err := fileutils.CopyPathToWriter(path, hash)
-	if err != nil {
-		panic("Failed to compute sha1")
-	}
-	return fmt.Sprintf("%x", hash.Sum(nil))
 }
