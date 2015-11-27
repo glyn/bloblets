@@ -3,6 +3,7 @@ package blobstore
 import (
 	"io"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -15,8 +16,11 @@ var (
 )
 
 func init() {
-	// See: http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region
-	service, bucketName = createService("s3.amazonaws.com", "us-east-1")
+	// Initialise S3 only when the server initialises.
+	if !strings.HasSuffix(os.Args[0], "client") {
+		// See: http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region
+		service, bucketName = createService("s3.amazonaws.com", "us-east-1")
+	}
 }
 
 func Present(key string) bool {
