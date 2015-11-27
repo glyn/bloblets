@@ -21,6 +21,7 @@ import (
 
 	"os"
 	"strings"
+	"time"
 )
 
 func AppHandler(w http.ResponseWriter, r *http.Request) {
@@ -38,7 +39,7 @@ func AppHandler(w http.ResponseWriter, r *http.Request) {
 	// Unzip any uploaded portion of the application.
 	appHdrs, ok := mpForm.File["application"]
 	if ok {
-
+		log.Println("AppHandler unzipping uploaded portion of application")
 		application := appHdrs[0]
 		zipFile, err := application.Open()
 		if err != nil {
@@ -58,21 +59,55 @@ func AppHandler(w http.ResponseWriter, r *http.Request) {
 
 		zr, err := zip.NewReader(zipFile, zipLen)
 
+		var blobUploadTime time.Duration = 0
 		for _, f := range zr.File {
-			fi, fn, err := unzipFile(f, appDir, w)
+			destPath := filepath.Join(appDir, f.Name)
+			destDir, _ := filepath.Split(destPath)
+			err := os.MkdirAll(destDir[:len(destDir)-1], 0755)
 			if err != nil {
+				servutil.Fail(w, "Failed to create destination directory: %s", err)
 				return
 			}
+
+			if f.FileInfo().IsDir() {
+				continue
+			}
+
+			dest, err := os.OpenFile(destPath, os.O_CREATE|os.O_RDWR, 0755)
+			if err != nil {
+				servutil.Fail(w, "Failed to create destination file: %s", err)
+				return
+			}
+
+			of, err := f.Open()
+			if err != nil {
+				servutil.Fail(w, "Failed to open application file: %s", err)
+				return
+			}
+
+			io.Copy(dest, of)
+			of.Close()
+			fi, err := dest.Stat()
+			if err != nil {
+				servutil.Fail(w, "Failed to stat application file: %s", err)
+				return
+			}
+			dest.Close()
+			fn := dest.Name()
 			if !fi.IsDir() && fi.Size() > 65535 {
+				uploadStart := time.Now()
 				sha := sha(fn)
 				//			log.Printf("AppHandler adding file %s to the blob store: %s\n", f.Name, sha)
 				blobstore.Add(sha, fn)
+				blobUploadTime += time.Now().Sub(uploadStart)
 			}
 		}
-		log.Println("AppHandler unzipped uploaded portion of application")
+		log.Printf("AppHandler unzipped uploaded portion of application and spent %d seconds uploading blobs to the blobstore\n", blobUploadTime/time.Second)
 	}
 
 	// Process any uploaded bloblets.
+	log.Println("AppHandler unzipping uploaded bloblets")
+	var blobletUploadTime time.Duration = 0
 	for i := 0; true; i++ {
 		hdrs, ok := mpForm.File[fmt.Sprintf("bloblet-%d", i)]
 		if !ok {
@@ -129,7 +164,9 @@ func AppHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Store bloblet zip file in blob store.
+		uploadStart := time.Now()
 		blobstore.Add(hash, tmpFilename)
+		blobletUploadTime += time.Now().Sub(uploadStart)
 
 		// Unzip bloblet into the application.
 		dest := filepath.Join(appDir, path)
@@ -151,10 +188,10 @@ func AppHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 	}
-
-	log.Println("AppHandler downloading blobs")
+	log.Printf("AppHandler unzipped uploaded bloblets and spent %d seconds uploading them to the blobstore\n", blobletUploadTime/time.Second)
 
 	// Add blobs to the application
+	log.Println("AppHandler demarshalling resources")
 	res := mpForm.Value["resources"]
 	presentFiles := []resources.AppFileResource{}
 	err = json.Unmarshal([]byte(res[0]), &presentFiles)
@@ -162,6 +199,8 @@ func AppHandler(w http.ResponseWriter, r *http.Request) {
 		servutil.Fail(w, "demarshalling resources failed: %s", err)
 		return
 	}
+	log.Println("AppHandler downloading & unzipping resources from the blobstore")
+	var blobletDownloadTime time.Duration = 0
 	for _, pf := range presentFiles {
 		dest := filepath.Join(appDir, pf.Path)
 		destDir, destFile := filepath.Split(dest)
@@ -177,7 +216,9 @@ func AppHandler(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				z := filepath.Join(downloadDir, "bloblet.zip")
+				downloadStart := time.Now()
 				blobstore.Get(pf.Sha1, z)
+				blobletDownloadTime += time.Now().Sub(downloadStart)
 
 				err = unzip(z, destDir, w)
 				if err != nil {
@@ -186,9 +227,12 @@ func AppHandler(w http.ResponseWriter, r *http.Request) {
 
 			})
 		} else {
+			downloadStart := time.Now()
 			blobstore.Get(pf.Sha1, dest)
+			blobletDownloadTime += time.Now().Sub(downloadStart)
 		}
 	}
+	log.Printf("AppHandler downloaded & unzipped resources from the blobstore and spent %d seconds downloading them from the blobstore\n", blobletDownloadTime/time.Second)
 
 	log.Println("AppHandler exiting")
 }
