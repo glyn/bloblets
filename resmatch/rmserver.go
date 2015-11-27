@@ -3,12 +3,14 @@ package resmatch
 import (
 	"encoding/json"
 	"io/ioutil"
+	"log"
 	"net/http"
 
 	"github.com/glyn/bloblets/servutil"
 )
 
 func (m matcher) ResourceMatchHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("ResourceMatchHandler entered")
 	if r.Method != "PUT" {
 		servutil.Fail(w, "invalid method: %s", r.Method)
 		return
@@ -44,4 +46,5 @@ func (m matcher) ResourceMatchHandler(w http.ResponseWriter, r *http.Request) {
 		servutil.Fail(w, "writing response failed: %s", err)
 		return
 	}
+	log.Println("ResourceMatchHandler exiting")
 }

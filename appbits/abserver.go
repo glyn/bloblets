@@ -19,6 +19,7 @@ import (
 	"github.com/glyn/bloblets/servutil"
 
 	"os"
+	"time"
 )
 
 func AppHandler(w http.ResponseWriter, r *http.Request) {
@@ -36,6 +37,7 @@ func AppHandler(w http.ResponseWriter, r *http.Request) {
 	// Unzip any uploaded portion of the application.
 	appHdrs, ok := mpForm.File["application"]
 	if ok {
+		log.Println("AppHandler unzipping uploaded portion of application")
 		application := appHdrs[0]
 		zipFile, err := application.Open()
 		if err != nil {
@@ -55,6 +57,7 @@ func AppHandler(w http.ResponseWriter, r *http.Request) {
 
 		zr, err := zip.NewReader(zipFile, zipLen)
 
+		var blobUploadTime time.Duration = 0
 		for _, f := range zr.File {
 			destPath := filepath.Join(appDir, f.Name)
 			destDir, _ := filepath.Split(destPath)
@@ -90,15 +93,17 @@ func AppHandler(w http.ResponseWriter, r *http.Request) {
 			dest.Close()
 			fn := dest.Name()
 			if !fi.IsDir() && fi.Size() > 65535 {
+				uploadStart := time.Now()
 				sha := sha(fn)
-				log.Printf("AppHandler adding file %s to the blob store: %s\n", f.Name, sha)
 				blobstore.Add(sha, fn)
+				blobUploadTime += time.Now().Sub(uploadStart)
 			}
 		}
-		log.Println("AppHandler unzipped uploaded portion of application")
+		log.Printf("AppHandler unzipped uploaded portion of application and spent %d seconds uploading blobs to the blobstore\n", blobUploadTime/time.Second)
 	}
 
 	// Add blobs to the application
+	log.Println("AppHandler demarshalling resources")
 	res := mpForm.Value["resources"]
 	presentFiles := []resources.AppFileResource{}
 	err = json.Unmarshal([]byte(res[0]), &presentFiles)
@@ -106,6 +111,7 @@ func AppHandler(w http.ResponseWriter, r *http.Request) {
 		servutil.Fail(w, "demarshalling resources failed: %s", err)
 		return
 	}
+	log.Println("AppHandler downloading resources from the blobstore")
 	for _, pf := range presentFiles {
 		dest := filepath.Join(appDir, pf.Path)
 		destDir, _ := filepath.Split(dest)
