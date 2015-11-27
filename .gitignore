@@ -24,4 +24,5 @@ _testmain.go
 *.prof
 client/client
 server/server
+server/compile/server
 server/manifest.secret.yml
