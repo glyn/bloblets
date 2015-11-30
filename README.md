@@ -18,12 +18,14 @@ Get the compile-time dependencies:
 go get https://github.com/cloudfoundry/cli.git
 ```
 
+You will also need an AWS account and corresponding AWS keys so that the blobstore can be stored in Amazon S3.
+
 ## Running Locally
 
 Run the server locally as follows:
 ```
 cd bloblets/server
-PORT=8080 go run server.go
+AWS_ACCESS_KEY_ID=<access key> AWS_SECRET_ACCESS_KEY=<secret key> PORT=8080 go run server.go
 ```
 
 Push an application to the server as follows:
@@ -47,11 +49,13 @@ GOOS=linux GOARCH=amd64 go build -o <app-dir> .
 
 where `<app-dir>` is a convenient empty directory.
 
+Copy `manifest.yml` to `manifest.secret.yml` and add your AWS keys to this file.
+
 Then push the server:
 ```
 cf api api.run.pivotal.io
 // log in and set org/space
-cf push <app-name> -p <app-dir> -c "./server" -b https://github.com/cloudfoundry/binary-buildpack.git
+cf push <app-name> -p <app-dir> -c "./server" -b https://github.com/cloudfoundry/binary-buildpack.git -f ./manifest.secret.yml
 ```
 
 where `<app-name>` is the name chosen for the application
